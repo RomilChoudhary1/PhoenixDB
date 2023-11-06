@@ -1,0 +1,12 @@
+[Unit]
+Description=phoenix server socket
+Before=phoenix.service
+#Conflicts=kvstore.service
+ConditionPathExists=!/etc/phoenix/phoenix_not_to_be_run
+
+[Socket]
+ListenStream=8001
+Accept=yes
+
+[Install]
+WantedBy=sockets.target

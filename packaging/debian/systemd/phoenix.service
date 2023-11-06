@@ -1,0 +1,21 @@
+[Unit]
+Description=phoenix service
+After=network.target auditd.service
+ConditionPathExists=!/etc/phoenix/phoenix_not_to_be_run
+
+[Service]
+EnvironmentFile=-/etc/default/phoenix
+ExecStart=/opt/phoenix/bin/phoenix console -noinput +Bd
+#ExecReload=/bin/kill -HUP $MAINPID
+#KillSignal=SIGKILL
+#KillMode=process
+Restart=always
+RestartPreventExitStatus=255
+#Type=simple
+User=phoenixuser
+Group=phoenixuser
+LimitNOFILE=1000000
+
+[Install]
+WantedBy=multi-user.target
+Alias=phoenix.service

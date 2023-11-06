@@ -1,0 +1,12 @@
+Package: phoenix
+Version: @VERSION@
+License: proprietary
+Section: base
+Maintainer: Neeraj Sharma <neeraj.sharma@redbus.com>
+Priority: optional
+Architecture: amd64
+Build-Depends: debhelper
+Depends: libcap2-bin, ntp
+Description: IAS v2 Integration
+  Integrating bus operators.
+

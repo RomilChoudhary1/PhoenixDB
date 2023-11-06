@@ -1,0 +1,11 @@
+Package: phoenix-upgrade
+Version: @VERSION@
+Depends: phoenix (<< @VERSION@)
+License: Proprietary
+Section: base
+Maintainer: Neeraj Sharma <neeraj.sharma@redbus.com>
+Priority: optional
+Architecture: amd64
+Description: IAS v2 Integration
+  Integrating bus operators.
+
