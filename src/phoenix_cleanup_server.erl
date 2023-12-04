@@ -58,6 +58,7 @@ delete_expired_ids(Ref, ShardKey) ->
     end.
 
 get_all_expired_ids(Ref, ShardKey) ->
+    MagicBinary = <<0, 0, 0, 0, 0, 0, 0, 0>>,
     BinShardKey = phoenix_util:convert_to_binary(ShardKey),
     try
         Resp = eleveldb:fold_keys(Ref,
@@ -68,7 +69,23 @@ get_all_expired_ids(Ref, ShardKey) ->
                     <<0, 0, 0, 0, ExpiryEpoch:64, Id/binary>> ->
                         case ExpiryEpoch < NowInSeconds of
                             true ->
-                                [Id, K] ++ AccIn;
+                                case eleveldb:get(Ref, Id, []) of
+                                    {ok, Response} ->
+                                        case Response of
+                                            <<MagicBinary:8/binary, _Value/binary>> ->
+                                                [K] ++ AccIn;
+                                            <<NewExpiryEpoch:64, _Val/binary>> ->
+                                                DeltaExp = NewExpiryEpoch - NowInSeconds,
+                                                case DeltaExp < 0 of
+                                                    true ->
+                                                        [Id, K] ++ AccIn;
+                                                    _ ->
+                                                        [K] ++ AccIn
+                                                end
+                                        end;
+                                    _ ->
+                                        [K] ++ AccIn
+                                end;
                             false ->
                                 throw({ok, AccIn})
                         end;
