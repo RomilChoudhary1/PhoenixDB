@@ -9,7 +9,7 @@
 -define(PATH_PREFIX, "/opt/phoenix_datastore/leveldb-data/").
 -define(EXPIRY_TIMER_SECS, 6 * 60 * 60 * 1000).
 -define(LEVELDB_OPERATION_TIMEOUT, 120 * 1000).
--define(TIMEOUT_MSEC, 4 * 60 * 60 * 1000).
+-define(TIMEOUT_MSEC, 60 * 60 * 1000).
 
 
 -include("phoenix_constants.hrl").
