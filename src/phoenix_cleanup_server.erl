@@ -97,10 +97,10 @@ get_all_expired_ids(Ref, ShardKey) ->
     catch _C:E ->
         case E of
             {ok, Response} ->
-                log_utils:publish_counter(<<"bm.event.ld.success.", BinShardKey/binary>>, 1),
+                log_utils:publish_counter(<<"bm.event.lde.success.", BinShardKey/binary>>, 1),
                 {ok, lists:reverse(Response)};
             _ ->
-                log_utils:publish_counter(<<"bm.event.ld.fail.", BinShardKey/binary>>, 1),
+                log_utils:publish_counter(<<"bm.event.lde.fail.", BinShardKey/binary>>, 1),
                 E
         end
     end.
@@ -111,10 +111,10 @@ delete_ids(Ids, Ref, ShardKey) ->
     try
         lists:foldl(fun(Id, _AccIn) ->
             delete(Id, Ref, ShardKey) end, [], Ids),
-        log_utils:publish_counter(<<"bm.event.ld.success.", BinShardKey/binary>>, 1),
+        log_utils:publish_counter(<<"bm.event.lde.success.", BinShardKey/binary>>, 1),
         ok
     catch _C:_E ->
-        log_utils:publish_counter(<<"bm.event.ld.fail.", BinShardKey/binary>>, 1),
+        log_utils:publish_counter(<<"bm.event.lde.fail.", BinShardKey/binary>>, 1),
         error
     end.
 
@@ -125,14 +125,15 @@ delete(Id, Ref, ShardKey) ->
         eleveldb:delete(Ref, Id, []),
         case Id of
             <<0, _K/binary>> ->
-                log_utils:publish_counter(<<"bm.event.ld.success.", BinShardKey/binary>>, 1),
+                log_utils:publish_counter(<<"bm.event.lde.success.", BinShardKey/binary>>, 1),
                 {ok, success};
             _ ->
-                phoenix_ets_store:delete(?CACHE_GENERIC, Id),
-                log_utils:publish_counter(<<"bm.event.ld.success.", BinShardKey/binary>>, 1),
+                CombinedKey = <<BinShardKey/binary, Id/binary>>,
+                phoenix_ets_store:delete(?CACHE_GENERIC, CombinedKey),
+                log_utils:publish_counter(<<"bm.event.lde.success.", BinShardKey/binary>>, 1),
                 {ok, success}
         end
     catch _C:_E ->
-        log_utils:publish_counter(<<"bm.event.ld.fail.", BinShardKey/binary>>, 1),
+        log_utils:publish_counter(<<"bm.event.lde.fail.", BinShardKey/binary>>, 1),
         {error, undefined}
     end.

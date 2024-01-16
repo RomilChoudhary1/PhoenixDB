@@ -122,34 +122,35 @@ create(Id, Value, Ref, ShardKey) ->
     try
         case eleveldb:put(Ref, Id, Value, []) of
             ok ->
-                cache_if_required(Id, Value),
-                log_utils:publish_counter(<<"bm.event.ld.success.", BinShardKey/binary>>, 1),
+                cache_if_required(BinShardKey, Id, Value),
+                log_utils:publish_counter(<<"bm.event.ldw.success.", BinShardKey/binary>>, 1),
                 ok;
             {error, _Reason} ->
-                log_utils:publish_counter(<<"bm.event.ld.fail.", BinShardKey/binary>>, 1),
+                log_utils:publish_counter(<<"bm.event.ldw.fail.", BinShardKey/binary>>, 1),
                 error
         end
     catch _C:_E ->
-        log_utils:publish_counter(<<"bm.event.ld.fail.", BinShardKey/binary>>, 1),
+        log_utils:publish_counter(<<"bm.event.ldw.fail.", BinShardKey/binary>>, 1),
         error
     end.
 
 read(Id, Ref, ShardKey) ->
     BinShardKey = phoenix_util:convert_to_binary(ShardKey),
-    case phoenix_ets_store:get(?CACHE_GENERIC, Id) of
+    CombinedKey = <<BinShardKey/binary, Id/binary>>,
+    case phoenix_ets_store:get(?CACHE_GENERIC, CombinedKey) of
         {ok, Data} ->
             {ok, Data};
         _ ->
             case eleveldb:get(Ref, Id, []) of
                 {ok, V} ->
-                    cache_if_required(Id, V),
-                    log_utils:publish_counter(<<"bm.event.ld.success.", BinShardKey/binary>>, 1),
+                    cache_if_required(ShardKey, Id, V),
+                    log_utils:publish_counter(<<"bm.event.ldr.success.", BinShardKey/binary>>, 1),
                     {ok, V};
                 not_found ->
-                    log_utils:publish_counter(<<"bm.event.ld.success.", BinShardKey/binary>>, 1),
+                    log_utils:publish_counter(<<"bm.event.ldr.success.", BinShardKey/binary>>, 1),
                     {error, not_found};
                 {error, Reason} ->
-                    log_utils:publish_counter(<<"bm.event.ld.fail.", BinShardKey/binary>>, 1),
+                    log_utils:publish_counter(<<"bm.event.ldr.fail.", BinShardKey/binary>>, 1),
                     {error, Reason}
             end
     end.
@@ -160,15 +161,16 @@ delete(Id, Ref, ShardKey) ->
         eleveldb:delete(Ref, Id, []),
         case Id of
             <<0, _K/binary>> ->
-                log_utils:publish_counter(<<"bm.event.ld.success.", BinShardKey/binary>>, 1),
+                log_utils:publish_counter(<<"bm.event.ldd.success.", BinShardKey/binary>>, 1),
                 {ok, success};
             _ ->
-                phoenix_ets_store:delete(?CACHE_GENERIC, Id),
-                log_utils:publish_counter(<<"bm.event.ld.success.", BinShardKey/binary>>, 1),
+                CombinedKey = <<BinShardKey/binary, Id/binary>>,
+                phoenix_ets_store:delete(?CACHE_GENERIC, CombinedKey),
+                log_utils:publish_counter(<<"bm.event.ldd.success.", BinShardKey/binary>>, 1),
                 {ok, success}
         end
     catch _C:_E ->
-        log_utils:publish_counter(<<"bm.event.ld.fail.", BinShardKey/binary>>, 1),
+        log_utils:publish_counter(<<"bm.event.ldd.fail.", BinShardKey/binary>>, 1),
         {error, undefined}
     end.
 
@@ -267,10 +269,11 @@ drop_shard(Path, Ref) ->
     eleveldb:destroy(Path, []),
     file:del_dir(Path).
 
-cache_if_required(K, V) ->
+cache_if_required(ShardKey, K, V) ->
     case is_normal_key(K) of
         true ->
-            phoenix_ets_store:async_put(?CACHE_GENERIC, K,V);
+            CombinedKey = <<ShardKey/binary, K/binary>>,
+            phoenix_ets_store:async_put(?CACHE_GENERIC, CombinedKey,V);
         _ ->
             ok
     end.
